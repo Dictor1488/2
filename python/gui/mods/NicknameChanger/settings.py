@@ -91,6 +91,25 @@ class SettingsHolder(CacheManagerBase):
 settings = SettingsHolder()
 
 
+def _make_checkbox(templates, label, var_name, value, tooltip=None):
+    creators = (
+        getattr(templates, 'createCheckBox', None),
+        getattr(templates, 'createCheckbox', None),
+        getattr(templates, 'createControl', None),
+    )
+    for creator in creators:
+        if creator is None:
+            continue
+        try:
+            if creator.__name__ == 'createControl':
+                return creator('CheckBox', label, var_name, value, tooltip=tooltip)
+            return creator(label, var_name, value, tooltip=tooltip)
+        except TypeError:
+            continue
+    logger.error('No compatible checkbox creator found in modsSettingsApi templates')
+    return None
+
+
 def _register_mod_settings_api():
     try:
         from gui.modsSettingsApi import g_modsSettingsApi, templates
@@ -99,6 +118,15 @@ def _register_mod_settings_api():
         return
 
     linkage_id = 'me.under-pressure.nicknamechanger'
+
+    checkbox = _make_checkbox(
+        templates,
+        Translator.HIDE_ALL_HEADER,
+        'hide_all_nicknames',
+        settings('hide_all_nicknames'),
+        tooltip=createTooltip(
+            header=Translator.HIDE_ALL_HEADER,
+            body=Translator.HIDE_ALL_BODY))
 
     template = {
         'modDisplayName': Translator.MOD_NAME,
@@ -119,15 +147,7 @@ def _register_mod_settings_api():
                     header=Translator.CLAN_TAG_HEADER,
                     body=Translator.CLAN_TAG_BODY)),
         ],
-        'column2': [
-            templates.createCheckBox(
-                Translator.HIDE_ALL_HEADER,
-                'hide_all_nicknames',
-                settings('hide_all_nicknames'),
-                tooltip=createTooltip(
-                    header=Translator.HIDE_ALL_HEADER,
-                    body=Translator.HIDE_ALL_BODY)),
-        ],
+        'column2': [item for item in [checkbox] if item is not None],
     }
 
     def on_changed(linkage, new_settings):
