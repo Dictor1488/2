@@ -3,7 +3,8 @@ from .platoon_tracker import platoon_tracker
 
 _HIDDEN_ALIAS = u"???"
 _HIDDEN_CLAN = u""
-_NAME_KEYS = frozenset(("name", "userName", "realName", "fakeName", "displayName", "fullName"))
+_NAME_KEYS = frozenset(("userName", "displayName", "fullName"))
+_DISPLAY_NAME_KEYS = frozenset(("userName", "displayName", "fullName"))
 
 _PLAYER_INFO_ATTRS = ('name', 'userName', 'displayName', 'fullName', 'realName', 'fakeName')
 _CLAN_ATTRS = ('clanAbbrev', 'clanTag')
@@ -120,23 +121,9 @@ def _patch_avatar_attrs(avatar, identity, label):
         logger.debug("Patched %s" % label)
         return
 
-    if _is_hide_all():
-        for attr in _PLAYER_INFO_ATTRS:
-            val = getattr(avatar, attr, None)
-            if val and val != _orig(identity):
-                try:
-                    setattr(avatar, attr, _HIDDEN_ALIAS)
-                    patched_name = True
-                except (AttributeError, TypeError):
-                    pass
-        if patched_name:
-            for clan_attr in _CLAN_ATTRS:
-                if hasattr(avatar, clan_attr):
-                    try:
-                        setattr(avatar, clan_attr, _HIDDEN_CLAN)
-                    except (AttributeError, TypeError):
-                        pass
-            logger.debug("hide_all: masked %s" % label)
+    # Do not mask avatar internals in hide_all mode. Battle Results UI uses
+    # these objects to distinguish players, and replacing all names with the
+    # same alias breaks selecting a specific player in the results screen.
 
 
 def patch_reusable_info_players(reusableInfo, identity):
@@ -175,33 +162,8 @@ def _patch_player_info(playerInfo, identity, dbID):
             logger.debug("Patched PlayerInfo for dbID=%s" % dbID)
             return
 
-        if _is_hide_all():
-            hide_patched = False
-            for attr in _PLAYER_INFO_ATTRS:
-                val = getattr(playerInfo, attr, None)
-                if val and val != _orig(identity):
-                    try:
-                        setattr(playerInfo, attr, _HIDDEN_ALIAS)
-                        hide_patched = True
-                    except (AttributeError, TypeError):
-                        pass
-            if not hide_patched:
-                for attr in _PRIVATE_NAME_ATTRS:
-                    val = getattr(playerInfo, attr, None)
-                    if val and val != _orig(identity):
-                        try:
-                            setattr(playerInfo, attr, _HIDDEN_ALIAS)
-                            hide_patched = True
-                        except (AttributeError, TypeError):
-                            pass
-            if hide_patched:
-                for attr in _CLAN_ATTRS + _PRIVATE_CLAN_ATTRS:
-                    if hasattr(playerInfo, attr):
-                        try:
-                            setattr(playerInfo, attr, _HIDDEN_CLAN)
-                        except (AttributeError, TypeError):
-                            pass
-                logger.debug("hide_all: masked PlayerInfo for dbID=%s" % dbID)
+        # Do not mask PlayerInfo internals in hide_all mode. The battle
+        # results screen relies on these values to keep players distinct.
     except Exception as e:
         logger.error("PlayerInfo patch error for dbID=%s: %s" % (dbID, e))
 
@@ -255,7 +217,10 @@ def mask_all_nicknames_in_results(data, identity):
             for avatar_id, avatar_data in data['avatars'].items():
                 if not isinstance(avatar_data, dict):
                     continue
-                for key in ('name', 'userName', 'realName', 'fakeName', 'displayName'):
+                # Mask only display-facing fields. Keep internal identity fields
+                # such as name/realName/fakeName intact so the UI can still
+                # distinguish one player row from another.
+                for key in ('userName', 'displayName', 'fullName'):
                     val = avatar_data.get(key)
                     if val and val != own and val != own_new:
                         avatar_data[key] = _HIDDEN_ALIAS
@@ -269,7 +234,7 @@ def mask_all_nicknames_in_results(data, identity):
                 for pid, pdata in data[key].items():
                     if not isinstance(pdata, dict):
                         continue
-                    for nkey in _NAME_KEYS:
+                    for nkey in _DISPLAY_NAME_KEYS:
                         val = pdata.get(nkey)
                         if val and val != own and val != own_new:
                             pdata[nkey] = _HIDDEN_ALIAS
