@@ -1,0 +1,11 @@
+{
+    "modname": "Spitzname-Wechsler",
+    "general.enable.header": "Mod aktivieren",
+    "general.enable.body": "Hauptschalter. Wenn deaktiviert, werden alle Hooks umgangen und der Originalname angezeigt.",
+    "general.nickname.header": "Spitzname",
+    "general.nickname.body": "Ersetzt Ihren echten Spitznamen überall im Client. Erforderlich.",
+    "general.clanTag.header": "Clan-Tag",
+    "general.clanTag.body": "Ersetzt Ihre Clan-Abkürzung. Leer lassen, um das Original beizubehalten.",
+    "general.hideAll.header": "Hide all nicknames",
+    "general.hideAll.body": "Replace ALL players nicknames with '???' (visible only to you). Your own nickname is still replaced by the value above."
+}

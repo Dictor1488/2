@@ -1,0 +1,11 @@
+{
+    "modname": "Nickname Changer",
+    "general.enable.header": "Enable mod",
+    "general.enable.body": "Master toggle. When off, all hooks are bypassed and the original name is shown.",
+    "general.nickname.header": "Nickname",
+    "general.nickname.body": "Replaces your real nickname everywhere in the client. Required.",
+    "general.clanTag.header": "Clan tag",
+    "general.clanTag.body": "Replaces your clan abbreviation. Leave empty to keep the original.",
+    "general.hideAll.header": "Hide all nicknames",
+    "general.hideAll.body": "Replace ALL players nicknames with '???' (visible only to you). Your own nickname is still replaced by the value above."
+}

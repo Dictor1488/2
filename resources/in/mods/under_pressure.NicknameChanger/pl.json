@@ -1,0 +1,11 @@
+{
+    "modname": "Zmiana nicku",
+    "general.enable.header": "Włącz mod",
+    "general.enable.body": "Główny przełącznik. Gdy wyłączony — wszystkie zaczepy są pomijane, wyświetlana jest oryginalna nazwa.",
+    "general.nickname.header": "Nick",
+    "general.nickname.body": "Zastępuje Twój prawdziwy nick wszędzie w kliencie. Wymagane.",
+    "general.clanTag.header": "Tag klanu",
+    "general.clanTag.body": "Zastępuje skrót klanu. Zostaw puste, aby zachować oryginalny.",
+    "general.hideAll.header": "Hide all nicknames",
+    "general.hideAll.body": "Replace ALL players nicknames with '???' (visible only to you). Your own nickname is still replaced by the value above."
+}
