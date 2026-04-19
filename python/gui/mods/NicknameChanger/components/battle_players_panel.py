@@ -5,8 +5,29 @@ from ..utils import logger, override, try_imports
 from ..platoon_tracker import platoon_tracker
 from . import Component
 
-_HIDDEN_ALIAS = u'???'
 _HIDDEN_CLAN = u''
+
+
+def _strip_badges(item):
+    if not isinstance(item, dict):
+        return
+
+    for key in list(item.keys()):
+        low = key.lower()
+        if (
+            'badge' in low or
+            'dogtag' in low or
+            'insign' in low or
+            'patch' in low or
+            'emblem' in low
+        ):
+            val = item.get(key)
+            if isinstance(val, list):
+                item[key] = []
+            elif isinstance(val, dict):
+                item[key] = {}
+            else:
+                item[key] = None
 
 
 class BattlePlayersPanelComponent(Component):
@@ -16,13 +37,14 @@ class BattlePlayersPanelComponent(Component):
         self._aliases = {}
         self._next_alias = 1
 
-    def _get_hidden_alias(self, item, uname):
+    def _get_hidden_alias(self, item):
         key = (
             item.get('vehicleID') or
+            item.get('vehID') or
             item.get('accountDBID') or
             item.get('dbID') or
             item.get('userName') or
-            uname
+            item.get('playerName')
         )
 
         alias = self._aliases.get(key)
@@ -31,6 +53,27 @@ class BattlePlayersPanelComponent(Component):
             self._aliases[key] = alias
             self._next_alias += 1
         return alias
+
+    def _is_own_row(self, item, identity):
+        try:
+            import BigWorld
+            player = BigWorld.player()
+            my_vehicle_id = getattr(player, 'playerVehicleID', None)
+        except Exception:
+            my_vehicle_id = None
+
+        uname = item.get('userName', '')
+        if uname and (uname == identity.original_name or uname == identity.new_name):
+            return True
+
+        if item.get('isCurrentPlayer') is True:
+            return True
+
+        for key in ('vehicleID', 'vehID'):
+            if my_vehicle_id is not None and item.get(key) == my_vehicle_id:
+                return True
+
+        return False
 
     def setup_hooks(self):
         PlayersPanel = try_imports(
@@ -56,25 +99,35 @@ class BattlePlayersPanelComponent(Component):
             if isinstance(result, dict):
                 for key in ('leftScope', 'rightScope', 'left', 'right'):
                     items = result.get(key)
-                    if isinstance(items, (list, tuple)):
-                        for item in items:
-                            if not isinstance(item, dict):
-                                continue
+                    if not isinstance(items, (list, tuple)):
+                        continue
 
-                            uname = item.get('userName', '')
+                    for item in items:
+                        if not isinstance(item, dict):
+                            continue
 
-                            if uname == identity.original_name:
-                                item['userName'] = identity.new_name
-                                if identity.new_clan:
-                                    item['clanAbbrev'] = identity.new_clan
+                        uname = item.get('userName', '')
+                        _strip_badges(item)
 
-                            elif platoon_tracker.is_platoon_mate(uname):
-                                alias = platoon_tracker.get_alias(uname)
-                                item['userName'] = alias
-                                item['clanAbbrev'] = _HIDDEN_CLAN
+                        if self._is_own_row(item, identity):
+                            item['userName'] = identity.new_name
+                            item['displayName'] = identity.new_name
+                            item['fullName'] = identity.new_name
+                            if identity.new_clan:
+                                item['clanAbbrev'] = identity.new_clan
 
-                            elif hide_all and uname:
-                                item['userName'] = self._get_hidden_alias(item, uname)
-                                item['clanAbbrev'] = _HIDDEN_CLAN
+                        elif uname and platoon_tracker.is_platoon_mate(uname):
+                            alias = platoon_tracker.get_alias(uname)
+                            item['userName'] = alias
+                            item['displayName'] = alias
+                            item['fullName'] = alias
+                            item['clanAbbrev'] = _HIDDEN_CLAN
+
+                        elif hide_all:
+                            alias = self._get_hidden_alias(item)
+                            item['userName'] = alias
+                            item['displayName'] = alias
+                            item['fullName'] = alias
+                            item['clanAbbrev'] = _HIDDEN_CLAN
 
             return result
