@@ -45,7 +45,7 @@ def try_imports(*import_funcs):
     return None
 
 
-_NAME_KEYS = frozenset(('name', 'userName', 'realName', 'fakeName', 'displayName', 'fullName'))
+_NAME_KEYS = frozenset(('name', 'userName', 'realName', 'fakeName', 'displayName', 'fullName', 'playerName'))
 _CLAN_KEYS = frozenset(('clanAbbrev', 'clanTag'))
 _MAX_RECURSION_DEPTH = 15
 
