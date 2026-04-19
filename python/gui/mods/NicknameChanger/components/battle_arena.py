@@ -13,14 +13,7 @@ _DEFERRED_PATCH_DELAY = 0.5
 
 _HIDDEN_ALIAS = u'???'
 _HIDDEN_CLAN = u''
-_ALIAS_TEMPLATE = u'Player %d'
-_BADGE_FIELDS = (
-    'badge', 'badges', 'badgeLabel', 'badgeType',
-    'prefixBadge', 'suffixBadge', 'suffixBadgeType',
-    'dogTag', 'dogTags', 'dogTagInfo',
-    'rankBadge', 'prestigeMark', 'insignia', 'insignias',
-    'patch', 'patches', 'emblem', 'emblems'
-)
+_BADGE_ATTR_MARKERS = ('badge', 'dogtag', 'insign', 'patch', 'emblem')
 
 
 def _is_avatar_ready():
@@ -49,122 +42,141 @@ def _is_world_valid():
         return False
 
 
-def _clear_badges(target):
+def _clear_badge_value(container, key, value):
     try:
-        if isinstance(target, dict):
-            for key in list(target.keys()):
-                low = key.lower()
-                if low in [f.lower() for f in _BADGE_FIELDS] or 'badge' in low or 'dogtag' in low or 'insign' in low or 'patch' in low or 'emblem' in low:
-                    value = target.get(key)
-                    if isinstance(value, list):
-                        target[key] = []
-                    elif isinstance(value, dict):
-                        target[key] = {}
-                    else:
-                        target[key] = None
+        if isinstance(value, list):
+            setattr(container, key, [])
+        elif isinstance(value, dict):
+            setattr(container, key, {})
+        elif isinstance(value, tuple):
+            setattr(container, key, ())
+        elif isinstance(value, bool):
+            setattr(container, key, False)
+        elif isinstance(value, (int, long)):
+            setattr(container, key, 0)
         else:
-            for key in _BADGE_FIELDS:
-                if hasattr(target, key):
-                    value = getattr(target, key)
+            setattr(container, key, None)
+    except Exception:
+        pass
+
+
+def _strip_badges_obj(obj):
+    try:
+        if obj is None:
+            return
+        if isinstance(obj, dict):
+            for key in list(obj.keys()):
+                low = key.lower()
+                if any(marker in low for marker in _BADGE_ATTR_MARKERS):
+                    value = obj.get(key)
                     if isinstance(value, list):
-                        setattr(target, key, [])
+                        obj[key] = []
                     elif isinstance(value, dict):
-                        setattr(target, key, {})
+                        obj[key] = {}
+                    elif isinstance(value, tuple):
+                        obj[key] = ()
+                    elif isinstance(value, bool):
+                        obj[key] = False
+                    elif isinstance(value, (int, long)):
+                        obj[key] = 0
                     else:
-                        try:
-                            setattr(target, key, None)
-                        except Exception:
-                            pass
+                        obj[key] = None
+            return
+
+        for attr in dir(obj):
+            if attr.startswith('_'):
+                continue
+            low = attr.lower()
+            if not any(marker in low for marker in _BADGE_ATTR_MARKERS):
+                continue
+            try:
+                value = getattr(obj, attr)
+            except Exception:
+                continue
+            _clear_badge_value(obj, attr, value)
     except Exception as e:
-        logger.debug('_clear_badges error: %s' % e)
+        logger.debug('_strip_badges_obj error: %s' % e)
 
 
-class _AliasState(object):
-
-    def __init__(self):
-        self._aliases = {}
-        self._next_index = 1
-
-    def reset(self):
-        self._aliases = {}
-        self._next_index = 1
-
-    def get(self, key):
-        alias = self._aliases.get(key)
-        if alias is None:
-            alias = _ALIAS_TEMPLATE % self._next_index
-            self._aliases[key] = alias
-            self._next_index += 1
-        return alias
-
-
-def _patch_veh_info_obj(veh_info, identity, alias_state=None):
+def _patch_veh_info_obj(veh_info, identity):
     from ..settings import settings as _settings
     try:
+        _strip_badges_obj(veh_info)
         if not hasattr(veh_info, 'name'):
             return veh_info
         veh_name = veh_info.name
-        _clear_badges(veh_info)
-        if veh_name == identity.original_name:
-            try:
-                veh_info.name = identity.new_name
-                if hasattr(veh_info, 'fakeName') and veh_info.fakeName == identity.original_name:
-                    veh_info.fakeName = identity.new_name
-                if identity.new_clan and hasattr(veh_info, 'clanAbbrev'):
-                    veh_info.clanAbbrev = identity.new_clan
-                return veh_info
-            except (AttributeError, TypeError):
-                pass
-            if hasattr(veh_info, '_replace'):
-                replacements = {'name': identity.new_name}
-                if hasattr(veh_info, 'fakeName') and veh_info.fakeName == identity.original_name:
-                    replacements['fakeName'] = identity.new_name
-                if identity.new_clan and hasattr(veh_info, 'clanAbbrev'):
-                    replacements['clanAbbrev'] = identity.new_clan
+        if veh_name != identity.original_name:
+            if platoon_tracker.is_platoon_mate(veh_name):
+                alias = platoon_tracker.get_alias(veh_name)
                 try:
-                    return veh_info._replace(**replacements)
-                except (ValueError, TypeError):
-                    pass
+                    veh_info.name = alias
+                    if hasattr(veh_info, 'clanAbbrev'):
+                        veh_info.clanAbbrev = _HIDDEN_CLAN
+                    if hasattr(veh_info, 'fakeName') and veh_info.fakeName == veh_name:
+                        veh_info.fakeName = alias
+                    _strip_badges_obj(veh_info)
+                except (AttributeError, TypeError):
+                    if hasattr(veh_info, '_replace'):
+                        repl = {'name': alias}
+                        if hasattr(veh_info, 'fakeName') and veh_info.fakeName == veh_name:
+                            repl['fakeName'] = alias
+                        try:
+                            return veh_info._replace(**repl)
+                        except (ValueError, TypeError):
+                            pass
+            elif _settings.hide_all_nicknames and veh_name:
+                try:
+                    veh_info.name = _HIDDEN_ALIAS
+                    if hasattr(veh_info, 'clanAbbrev'):
+                        veh_info.clanAbbrev = _HIDDEN_CLAN
+                    if hasattr(veh_info, 'fakeName') and veh_info.fakeName == veh_name:
+                        veh_info.fakeName = _HIDDEN_ALIAS
+                    _strip_badges_obj(veh_info)
+                except (AttributeError, TypeError):
+                    if hasattr(veh_info, '_replace'):
+                        repl = {'name': _HIDDEN_ALIAS}
+                        if hasattr(veh_info, 'fakeName') and veh_info.fakeName == veh_name:
+                            repl['fakeName'] = _HIDDEN_ALIAS
+                        try:
+                            return veh_info._replace(**repl)
+                        except (ValueError, TypeError):
+                            pass
             return veh_info
-
-        if platoon_tracker.is_platoon_mate(veh_name):
-            alias = platoon_tracker.get_alias(veh_name)
-        elif _settings.hide_all_nicknames and veh_name:
-            alias = alias_state.get(veh_name) if alias_state is not None else _HIDDEN_ALIAS
-        else:
+        if veh_info.name != identity.original_name:
             return veh_info
-
         try:
-            veh_info.name = alias
-            if hasattr(veh_info, 'clanAbbrev'):
-                veh_info.clanAbbrev = _HIDDEN_CLAN
-            if hasattr(veh_info, 'fakeName') and veh_info.fakeName == veh_name:
-                veh_info.fakeName = alias
+            veh_info.name = identity.new_name
+            if hasattr(veh_info, 'fakeName') and veh_info.fakeName == identity.original_name:
+                veh_info.fakeName = identity.new_name
+            if identity.new_clan and hasattr(veh_info, 'clanAbbrev'):
+                veh_info.clanAbbrev = identity.new_clan
+            _strip_badges_obj(veh_info)
             return veh_info
         except (AttributeError, TypeError):
-            if hasattr(veh_info, '_replace'):
-                repl = {'name': alias}
-                if hasattr(veh_info, 'fakeName') and veh_info.fakeName == veh_name:
-                    repl['fakeName'] = alias
-                if hasattr(veh_info, 'clanAbbrev'):
-                    repl['clanAbbrev'] = _HIDDEN_CLAN
-                try:
-                    return veh_info._replace(**repl)
-                except (ValueError, TypeError):
-                    pass
+            pass
+        if hasattr(veh_info, '_replace'):
+            replacements = {'name': identity.new_name}
+            if hasattr(veh_info, 'fakeName') and veh_info.fakeName == identity.original_name:
+                replacements['fakeName'] = identity.new_name
+            if identity.new_clan and hasattr(veh_info, 'clanAbbrev'):
+                replacements['clanAbbrev'] = identity.new_clan
+            try:
+                return veh_info._replace(**replacements)
+            except (ValueError, TypeError):
+                pass
     except Exception as e:
         logger.debug('_patch_veh_info_obj error: %s' % e)
     return veh_info
 
 
-def _patch_veh_info_list(veh_info_list, identity, alias_state=None):
+def _patch_veh_info_list(veh_info_list, identity):
     if not veh_info_list:
         return veh_info_list
     try:
         result = []
         changed = False
         for item in veh_info_list:
-            patched = _patch_veh_info_obj(item, identity, alias_state)
+            patched = _patch_veh_info_obj(item, identity)
             if patched is not item:
                 changed = True
             result.append(patched)
@@ -188,7 +200,6 @@ class BattleArenaComponent(Component):
         self._patched_this_battle = False
         self._callback_generation = 0
         self._patched_arenas = set()
-        self._aliases = _AliasState()
 
     def setup_hooks(self):
         identity = self.identity
@@ -208,7 +219,7 @@ class BattleArenaComponent(Component):
                 def hooked_update_vehicles_list(baseMethod, baseObject, vehInfoList):
                     if settings.enabled and identity.has_original:
                         try:
-                            vehInfoList = _patch_veh_info_list(vehInfoList, identity, comp._aliases)
+                            vehInfoList = _patch_veh_info_list(vehInfoList, identity)
                         except Exception as e:
                             logger.debug('updateVehiclesList patch error: %s' % e)
                     return baseMethod(baseObject, vehInfoList)
@@ -222,7 +233,7 @@ class BattleArenaComponent(Component):
                             import cPickle
                             import zlib
                             info_tuple = cPickle.loads(zlib.decompress(argStr))
-                            patched = _patch_veh_info_list(info_tuple, identity, comp._aliases)
+                            patched = _patch_veh_info_list(info_tuple, identity)
                             argStr = zlib.compress(cPickle.dumps(patched), 1)
                         except Exception as e:
                             logger.debug('arena.update VEHICLE_LIST patch error: %s' % e)
@@ -272,20 +283,17 @@ class BattleArenaComponent(Component):
                 if hasattr(baseObject, 'player') and baseObject.player:
                     pvo = baseObject.player
                     try:
-                        _clear_badges(pvo)
-                        if hasattr(pvo, 'vehicleID') and pvo.vehicleID == getattr(BigWorld.player(), 'playerVehicleID', None):
-                            if hasattr(pvo, 'name'):
+                        _strip_badges_obj(pvo)
+                        if hasattr(pvo, 'name') and pvo.name == identity.original_name:
+                            try:
                                 pvo.name = identity.new_name
-                            if identity.new_clan and hasattr(pvo, 'clanAbbrev'):
-                                pvo.clanAbbrev = identity.new_clan
-                        elif hasattr(pvo, 'name') and pvo.name and settings.hide_all_nicknames and not platoon_tracker.is_platoon_mate(pvo.name):
-                            pvo.name = comp._aliases.get(getattr(pvo, 'vehicleID', None) or pvo.name)
-                            if hasattr(pvo, 'clanAbbrev'):
-                                pvo.clanAbbrev = _HIDDEN_CLAN
-                        elif hasattr(pvo, 'name') and pvo.name and platoon_tracker.is_platoon_mate(pvo.name):
-                            pvo.name = platoon_tracker.get_alias(pvo.name)
-                            if hasattr(pvo, 'clanAbbrev'):
-                                pvo.clanAbbrev = _HIDDEN_CLAN
+                                if identity.new_clan and hasattr(pvo, 'clanAbbrev'):
+                                    pvo.clanAbbrev = identity.new_clan
+                                if hasattr(pvo, 'fakeName') and pvo.fakeName == identity.original_name:
+                                    pvo.fakeName = identity.new_name
+                                _strip_badges_obj(pvo)
+                            except (AttributeError, TypeError):
+                                pass
                     except Exception:
                         pass
                 return result
@@ -306,7 +314,6 @@ class BattleArenaComponent(Component):
         self._callback_generation += 1
         self._reset()
         self._patched_arenas.clear()
-        self._aliases.reset()
 
     def on_settings_changed(self):
         try:
@@ -315,7 +322,6 @@ class BattleArenaComponent(Component):
                 return
             self._patched_arenas.clear()
             self._patched_this_battle = False
-            self._aliases.reset()
             if settings.enabled and self.identity.has_original:
                 self._patch_arena_vehicles_if_ready()
                 self._patch_arena_dp()
@@ -400,30 +406,29 @@ class BattleArenaComponent(Component):
                 return
             identity = self.identity
             hide_all = settings.hide_all_nicknames
-            my_vehicle_id = getattr(BigWorld.player(), 'playerVehicleID', None)
             for vehicleID, vehicleData in arena.vehicles.items():
                 if not isinstance(vehicleData, dict):
                     continue
+                _strip_badges_obj(vehicleData)
                 veh_name = vehicleData.get('name', '')
-                _clear_badges(vehicleData)
-                if vehicleID == my_vehicle_id or veh_name == identity.original_name:
+                if veh_name == identity.original_name:
                     vehicleData['name'] = identity.new_name
                     if identity.new_clan:
                         vehicleData['clanAbbrev'] = identity.new_clan
                     if vehicleData.get('fakeName') == identity.original_name:
                         vehicleData['fakeName'] = identity.new_name
-                elif veh_name and platoon_tracker.is_platoon_mate(veh_name):
+                elif platoon_tracker.is_platoon_mate(veh_name):
                     alias = platoon_tracker.get_alias(veh_name)
                     vehicleData['name'] = alias
                     vehicleData['clanAbbrev'] = _HIDDEN_CLAN
                     if vehicleData.get('fakeName') == veh_name:
                         vehicleData['fakeName'] = alias
                 elif hide_all and veh_name:
-                    alias = self._aliases.get(vehicleID)
-                    vehicleData['name'] = alias
+                    vehicleData['name'] = _HIDDEN_ALIAS
                     vehicleData['clanAbbrev'] = _HIDDEN_CLAN
                     if vehicleData.get('fakeName') == veh_name:
-                        vehicleData['fakeName'] = alias
+                        vehicleData['fakeName'] = _HIDDEN_ALIAS
+                _strip_badges_obj(vehicleData)
             self._patched_arenas.add(arena_id)
         except Exception as e:
             logger.error('arena vehicles patch error: %s' % e)
@@ -443,17 +448,15 @@ class BattleArenaComponent(Component):
             if arenaDP is None:
                 return
             identity = self.identity
-            my_vehicle_id = getattr(BigWorld.player(), 'playerVehicleID', None)
             if hasattr(arenaDP, 'getVehiclesInfoIterator'):
                 for vInfoVO in arenaDP.getVehiclesInfoIterator():
                     if not hasattr(vInfoVO, 'player') or not vInfoVO.player:
                         continue
                     pvo = vInfoVO.player
                     try:
+                        _strip_badges_obj(pvo)
                         pvo_name = getattr(pvo, 'name', None)
-                        vehicle_id = getattr(vInfoVO, 'vehicleID', None) or getattr(pvo, 'vehicleID', None)
-                        _clear_badges(pvo)
-                        if vehicle_id == my_vehicle_id or pvo_name == identity.original_name:
+                        if pvo_name == identity.original_name:
                             try:
                                 pvo.name = identity.new_name
                                 if identity.new_clan and hasattr(pvo, 'clanAbbrev'):
@@ -472,16 +475,16 @@ class BattleArenaComponent(Component):
                                     pvo.fakeName = alias
                             except (AttributeError, TypeError):
                                 pass
-                        elif pvo_name and settings.hide_all_nicknames:
-                            alias = self._aliases.get(vehicle_id or pvo_name)
+                        elif pvo_name and settings.hide_all_nicknames and pvo_name != identity.original_name:
                             try:
-                                pvo.name = alias
+                                pvo.name = _HIDDEN_ALIAS
                                 if hasattr(pvo, 'clanAbbrev'):
                                     pvo.clanAbbrev = _HIDDEN_CLAN
                                 if hasattr(pvo, 'fakeName') and pvo.fakeName == pvo_name:
-                                    pvo.fakeName = alias
+                                    pvo.fakeName = _HIDDEN_ALIAS
                             except (AttributeError, TypeError):
                                 pass
+                        _strip_badges_obj(pvo)
                     except Exception:
                         pass
         except Exception as e:
