@@ -329,15 +329,14 @@ def mask_all_nicknames_in_results(data, identity):
         alias_map = {}
         next_idx = [1]
 
-        def get_alias(raw_key, raw_name):
+        def get_alias(raw_name):
             if not raw_name or raw_name == own:
                 return own_alias
 
-            key = raw_key or raw_name
-            alias = alias_map.get(key)
+            alias = alias_map.get(raw_name)
             if alias is None:
                 alias = _ALIAS_TEMPLATE % next_idx[0]
-                alias_map[key] = alias
+                alias_map[raw_name] = alias
                 next_idx[0] += 1
             return alias
 
@@ -362,7 +361,7 @@ def mask_all_nicknames_in_results(data, identity):
                         if ck in avatar_data:
                             avatar_data[ck] = _clan(identity) or _HIDDEN_CLAN
                 elif raw_name:
-                    alias = get_alias(avatar_id, raw_name)
+                    alias = get_alias(raw_name)
                     avatar_data['userName'] = alias
                     avatar_data['displayName'] = alias
                     avatar_data['fullName'] = alias
@@ -392,16 +391,18 @@ def mask_all_nicknames_in_results(data, identity):
 
                 if raw_name in own_names or raw_name == own:
                     pdata['userName'] = own_alias
-                    pdata['displayName'] = own_alias
-                    pdata['fullName'] = own_full
+                    if 'displayName' in pdata:
+                        pdata['displayName'] = own_alias
+                    if 'fullName' in pdata:
+                        pdata['fullName'] = own_full
                     for ck in _CLAN_ATTRS:
                         if ck in pdata:
                             pdata[ck] = _clan(identity) or _HIDDEN_CLAN
                 elif raw_name:
-                    alias = get_alias(pid, raw_name)
-                    pdata['userName'] = alias
-                    pdata['displayName'] = alias
-                    pdata['fullName'] = alias
+                    alias = get_alias(raw_name)
+                    for nkey in _DISPLAY_NAME_KEYS:
+                        if nkey in pdata:
+                            pdata[nkey] = alias
                     for ck in _CLAN_ATTRS:
                         if ck in pdata:
                             pdata[ck] = _HIDDEN_CLAN
