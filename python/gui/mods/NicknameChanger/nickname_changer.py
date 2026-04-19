@@ -124,7 +124,7 @@ class NicknameChanger(object):
 
     def _on_avatar_become_player(self):
         if self.controller:
-            self.controller.on_avatar_become_non_player()
+            self.controller.on_avatar_ready()
 
     def _on_avatar_ready(self):
         try:
@@ -137,6 +137,9 @@ class NicknameChanger(object):
         try:
             if self.controller:
                 self.controller.on_avatar_become_non_player()
+                # Re-apply lobby hooks so battleResultsCache gets re-patched
+                # when the post-battle results screen is shown in the lobby.
+                self.controller.on_lobby_ready()
         except Exception as e:
             logger.error("on_avatar_become_non_player: %s" % e)
 
