@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from ..settings import settings
-from ..utils import logger, override, try_imports
+from ..utils import logger, override, try_imports, format_full_name
 from ..platoon_tracker import platoon_tracker
 from . import Component
 
@@ -63,9 +63,15 @@ class BattleFullStatsComponent(Component):
             my_vehicle_id = None
 
         uname = item.get('userName', '')
-        if uname and (uname == identity.original_name or uname == identity.new_name):
-            return True
+        dname = item.get('displayName', '')
+        fname = item.get('fullName', '')
 
+        if uname in (identity.original_name, identity.new_name):
+            return True
+        if dname in (identity.original_name, identity.new_name):
+            return True
+        if fname and identity.original_name and identity.original_name in fname:
+            return True
         if item.get('isCurrentPlayer') is True:
             return True
 
@@ -74,6 +80,19 @@ class BattleFullStatsComponent(Component):
                 return True
 
         return False
+
+    def _apply_own_identity(self, item, identity):
+        item['userName'] = identity.new_name
+        item['displayName'] = identity.new_name
+        item['fullName'] = format_full_name(identity.new_name, identity.new_clan or u'')
+        if identity.new_clan is not None:
+            item['clanAbbrev'] = identity.new_clan
+
+    def _apply_alias_identity(self, item, alias):
+        item['userName'] = alias
+        item['displayName'] = alias
+        item['fullName'] = alias
+        item['clanAbbrev'] = _HIDDEN_CLAN
 
     def setup_hooks(self):
         FullStats = try_imports(
@@ -105,24 +124,14 @@ class BattleFullStatsComponent(Component):
                     _strip_badges(item)
 
                     if self._is_own_row(item, identity):
-                        item['userName'] = identity.new_name
-                        item['displayName'] = identity.new_name
-                        item['fullName'] = identity.new_name
-                        if identity.new_clan:
-                            item['clanAbbrev'] = identity.new_clan
+                        self._apply_own_identity(item, identity)
 
                     elif uname and platoon_tracker.is_platoon_mate(uname):
                         alias = platoon_tracker.get_alias(uname)
-                        item['userName'] = alias
-                        item['displayName'] = alias
-                        item['fullName'] = alias
-                        item['clanAbbrev'] = _HIDDEN_CLAN
+                        self._apply_alias_identity(item, alias)
 
                     elif hide_all:
                         alias = self._get_hidden_alias(item)
-                        item['userName'] = alias
-                        item['displayName'] = alias
-                        item['fullName'] = alias
-                        item['clanAbbrev'] = _HIDDEN_CLAN
+                        self._apply_alias_identity(item, alias)
 
             return result
