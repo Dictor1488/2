@@ -6,8 +6,8 @@ from .platoon_tracker import platoon_tracker
 _HIDDEN_ALIAS = u"???"
 _HIDDEN_CLAN = u""
 
-_NAME_KEYS = frozenset(("userName", "displayName", "fullName"))
-_DISPLAY_NAME_KEYS = frozenset(("userName", "displayName", "fullName"))
+_NAME_KEYS = frozenset(("userName", "displayName", "fullName", "playerName", "name"))
+_DISPLAY_NAME_KEYS = frozenset(("userName", "displayName", "fullName", "playerName", "name"))
 
 _PLAYER_INFO_ATTRS = ('name', 'userName', 'displayName', 'fullName', 'realName', 'fakeName')
 _CLAN_ATTRS = ('clanAbbrev', 'clanTag')
@@ -272,7 +272,7 @@ def patch_battle_results_avatars(data, identity):
                     continue
 
                 name_patched = False
-                for key in ('name', 'userName', 'realName', 'fakeName', 'displayName'):
+                for key in ('name', 'userName', 'realName', 'fakeName', 'displayName', 'fullName', 'playerName'):
                     if key in avatar_data and avatar_data[key] == _orig(identity):
                         avatar_data[key] = _nick(identity)
                         name_patched = True
@@ -347,10 +347,12 @@ def mask_all_nicknames_in_results(data, identity):
 
                 raw_name = (
                     avatar_data.get('name') or
+                    avatar_data.get('playerName') or
                     avatar_data.get('realName') or
                     avatar_data.get('fakeName') or
                     avatar_data.get('userName') or
-                    avatar_data.get('displayName')
+                    avatar_data.get('displayName') or
+                    avatar_data.get('fullName')
                 )
 
                 if raw_name == own:
@@ -382,6 +384,7 @@ def mask_all_nicknames_in_results(data, identity):
 
                 raw_name = (
                     pdata.get('name') or
+                    pdata.get('playerName') or
                     pdata.get('realName') or
                     pdata.get('fakeName') or
                     pdata.get('userName') or
