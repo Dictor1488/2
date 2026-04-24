@@ -7,7 +7,5 @@
     "general.clanTag.header": "Clan tag",
     "general.clanTag.body": "Replaces your clan abbreviation. Leave empty to keep the original.",
     "general.hideAll.header": "Hide all nicknames",
-    "general.hideAll.body": "Replace ALL players nicknames with '???' (visible only to you). Your own nickname is still replaced by the value above.",
-    "general.hideServer.header": "Hide server number",
-    "general.hideServer.body": "Hides your server/cluster number in the hangar header and in battle (removes the '#1234' suffix from your name)."
+    "general.hideAll.body": "Replace ALL players nicknames with '???' (visible only to you). Your own nickname is still replaced by the value above."
 }

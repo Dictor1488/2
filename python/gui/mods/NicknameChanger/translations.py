@@ -128,8 +128,6 @@ class TranslationManager(object):
             "general.clanTag.body": "Replaces your clan abbreviation. Leave empty to keep the original.",
             "general.hideAll.header": "Hide all nicknames",
             "general.hideAll.body": "Replace ALL players nicknames with '???' (visible only to you). Your own nickname is still replaced by the value above.",
-            "general.hideServer.header": "Hide server number",
-            "general.hideServer.body": "Hides your server/cluster number in the hangar header and in battle (e.g. '#1234' suffix is removed from your name).",
         }
 
     def getCurrentLanguage(self):
@@ -197,8 +195,6 @@ class Translator(object):
     CLAN_TAG_BODY = TranslationElement("general.clanTag.body")
     HIDE_ALL_HEADER = TranslationElement("general.hideAll.header")
     HIDE_ALL_BODY = TranslationElement("general.hideAll.body")
-    HIDE_SERVER_HEADER = TranslationElement("general.hideServer.header")
-    HIDE_SERVER_BODY = TranslationElement("general.hideServer.body")
 
 
 def getTranslation(key):

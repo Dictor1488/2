@@ -25,7 +25,6 @@ class SettingsHolder(CacheManagerBase):
             'nickname': DEFAULT_NICKNAME,
             'clan_tag': DEFAULT_CLAN_TAG,
             'hide_all_nicknames': False,
-            'hide_server': False,
         }
         self._listeners = []
         loaded = self.load()
@@ -88,10 +87,6 @@ class SettingsHolder(CacheManagerBase):
     def hide_all_nicknames(self):
         return bool(self.data.get('hide_all_nicknames'))
 
-    @property
-    def hide_server(self):
-        return bool(self.data.get('hide_server'))
-
 
 settings = SettingsHolder()
 
@@ -133,15 +128,6 @@ def _register_mod_settings_api():
             header=Translator.HIDE_ALL_HEADER,
             body=Translator.HIDE_ALL_BODY))
 
-    checkbox_server = _make_checkbox(
-        templates,
-        Translator.HIDE_SERVER_HEADER,
-        'hide_server',
-        settings('hide_server'),
-        tooltip=createTooltip(
-            header=Translator.HIDE_SERVER_HEADER,
-            body=Translator.HIDE_SERVER_BODY))
-
     template = {
         'modDisplayName': Translator.MOD_NAME,
         'enabled': settings('enable'),
@@ -161,7 +147,7 @@ def _register_mod_settings_api():
                     header=Translator.CLAN_TAG_HEADER,
                     body=Translator.CLAN_TAG_BODY)),
         ],
-        'column2': [item for item in [checkbox, checkbox_server] if item is not None],
+        'column2': [item for item in [checkbox] if item is not None],
     }
 
     def on_changed(linkage, new_settings):
@@ -176,8 +162,6 @@ def _register_mod_settings_api():
             update['clan_tag'] = new_settings['clan_tag']
         if 'hide_all_nicknames' in new_settings:
             update['hide_all_nicknames'] = new_settings['hide_all_nicknames']
-        if 'hide_server' in new_settings:
-            update['hide_server'] = new_settings['hide_server']
         if update:
             settings.update(update)
             logger.debug("Settings updated via UI: %s" % update)

@@ -41,7 +41,6 @@ class ComponentsController(object):
         self._initialized = True
 
         from .lobby_header import LobbyHeaderComponent
-        from .lobby_server import LobbyServerComponent
         from .lobby_platoon import LobbyPlatoonComponent
         from .lobby_stronghold import LobbyStrongholdComponent
         from .lobby_training import LobbyTrainingComponent
@@ -49,14 +48,12 @@ class ComponentsController(object):
         from .lobby_xmpp_users import LobbyXmppUsersComponent
         from .lobby_prb import LobbyPrbComponent
         from .battle_arena import BattleArenaComponent
-        from .battle_server import BattleServerComponent
         from .battle_players_panel import BattlePlayersPanelComponent
         from .battle_full_stats import BattleFullStatsComponent
         from .battle_results import BattleResultsComponent
 
         component_classes = [
             LobbyHeaderComponent,
-            LobbyServerComponent,
             LobbyPlatoonComponent,
             LobbyStrongholdComponent,
             LobbyTrainingComponent,
@@ -64,7 +61,6 @@ class ComponentsController(object):
             LobbyXmppUsersComponent,
             LobbyPrbComponent,
             BattleArenaComponent,
-            BattleServerComponent,
             BattlePlayersPanelComponent,
             BattleFullStatsComponent,
             BattleResultsComponent,
