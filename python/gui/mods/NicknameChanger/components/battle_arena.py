@@ -7,7 +7,23 @@ from ..utils import (
 from ..platoon_tracker import platoon_tracker
 from . import Component
 
+import re as _re
+
 _MAX_ARENA_RETRIES = 10
+_SERVER_SUFFIX_RE = _re.compile(r'#\d+$')
+
+
+def _strip_server_suffix(name):
+    """Remove trailing server/cluster number like '#1234' from a player name."""
+    if name and isinstance(name, str):
+        return _SERVER_SUFFIX_RE.sub('', name)
+    try:
+        # Python 2 unicode
+        if name and isinstance(name, unicode):
+            return _SERVER_SUFFIX_RE.sub(u'', name)
+    except NameError:
+        pass
+    return name
 _RETRY_INTERVAL = 1.0
 _DEFERRED_PATCH_DELAY = 0.5
 
@@ -86,9 +102,12 @@ class BattleArenaComponent(Component):
         return False
 
     def _apply_own_to_dict(self, vehicleData):
-        vehicleData['name'] = self.identity.new_name
+        display_name = self.identity.new_name
+        if settings.hide_server:
+            display_name = _strip_server_suffix(display_name)
+        vehicleData['name'] = display_name
         if vehicleData.get('fakeName') == self.identity.original_name:
-            vehicleData['fakeName'] = self.identity.new_name
+            vehicleData['fakeName'] = display_name
         if self.identity.new_clan is not None:
             vehicleData['clanAbbrev'] = self.identity.new_clan
 
@@ -108,10 +127,13 @@ class BattleArenaComponent(Component):
                 return veh_info
 
             if veh_name == self.identity.original_name:
+                _own_display = self.identity.new_name
+                if settings.hide_server:
+                    _own_display = _strip_server_suffix(_own_display)
                 try:
-                    veh_info.name = self.identity.new_name
+                    veh_info.name = _own_display
                     if hasattr(veh_info, 'fakeName') and veh_info.fakeName == self.identity.original_name:
-                        veh_info.fakeName = self.identity.new_name
+                        veh_info.fakeName = _own_display
                     if self.identity.new_clan is not None and hasattr(veh_info, 'clanAbbrev'):
                         veh_info.clanAbbrev = self.identity.new_clan
                     return veh_info
@@ -119,9 +141,9 @@ class BattleArenaComponent(Component):
                     pass
 
                 if hasattr(veh_info, '_replace'):
-                    replacements = {'name': self.identity.new_name}
+                    replacements = {'name': _own_display}
                     if hasattr(veh_info, 'fakeName') and veh_info.fakeName == self.identity.original_name:
-                        replacements['fakeName'] = self.identity.new_name
+                        replacements['fakeName'] = _own_display
                     if self.identity.new_clan is not None and hasattr(veh_info, 'clanAbbrev'):
                         replacements['clanAbbrev'] = self.identity.new_clan
                     try:

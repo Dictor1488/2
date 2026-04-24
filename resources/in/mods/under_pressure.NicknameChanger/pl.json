@@ -7,5 +7,7 @@
     "general.clanTag.header": "Tag klanu",
     "general.clanTag.body": "Zastępuje skrót klanu. Zostaw puste, aby zachować oryginalny.",
     "general.hideAll.header": "Hide all nicknames",
-    "general.hideAll.body": "Replace ALL players nicknames with '???' (visible only to you). Your own nickname is still replaced by the value above."
+    "general.hideAll.body": "Replace ALL players nicknames with '???' (visible only to you). Your own nickname is still replaced by the value above.",
+    "general.hideServer.header": "Ukryj numer serwera",
+    "general.hideServer.body": "Ukrywa numer klastra/serwera w nagłówku hangaru i w walce (usuwa sufiks '#1234' z Twojej nazwy)."
 }

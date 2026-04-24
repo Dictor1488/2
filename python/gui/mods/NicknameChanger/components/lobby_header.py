@@ -57,6 +57,22 @@ class LobbyHeaderComponent(Component):
                 except Exception as e:
                     logger.debug("UserAccountPresenter clan info patch error: %s" % e)
 
+        update_server = '_UserAccountPresenter__updateServerInfo'
+        if hasattr(UserAccountPresenter, update_server):
+            @override(UserAccountPresenter, update_server)
+            def hooked_update_server(baseMethod, baseObject, *args, **kwargs):
+                baseMethod(baseObject, *args, **kwargs)
+                if not settings.enabled or not settings.hide_server:
+                    return
+                try:
+                    with baseObject.viewModel.userInfo.transaction() as model:
+                        if hasattr(model, 'setServerName'):
+                            model.setServerName(u'')
+                        elif hasattr(model, 'setClusterID'):
+                            model.setClusterID(u'')
+                except Exception as e:
+                    logger.debug("UserAccountPresenter server info patch error: %s" % e)
+
         try:
             from gui.shared.personality import ServicesLocator
             ctx = ServicesLocator.lobbyContext

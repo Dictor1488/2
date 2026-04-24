@@ -3,6 +3,18 @@
 from .utils import logger, replace_all_in_dict, format_full_name
 from .platoon_tracker import platoon_tracker
 
+import re as _re
+
+_SERVER_SUFFIX_RE = _re.compile(r'#\d+$')
+
+
+def _strip_server_suffix(name):
+    """Remove trailing '#1234' server suffix from a player name."""
+    if not name:
+        return name
+    return _SERVER_SUFFIX_RE.sub('', name)
+
+
 _HIDDEN_ALIAS = u"???"
 _HIDDEN_CLAN = u""
 
@@ -31,7 +43,11 @@ def _orig(identity):
 
 
 def _nick(identity):
-    return identity.new_name
+    from .settings import settings as _settings
+    name = identity.new_name
+    if _settings.enabled and _settings.hide_server:
+        name = _strip_server_suffix(name)
+    return name
 
 
 def _clan(identity):
